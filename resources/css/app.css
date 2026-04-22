@@ -1,0 +1,178 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html,
+    body {
+        font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    body {
+        @apply bg-rose-50 text-slate-800;
+    }
+}
+
+@layer components {
+    .app-shell {
+        @apply min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff7ed_0%,_#f0f9ff_45%,_#fdf2f8_100%)];
+    }
+
+    .top-nav {
+        @apply sticky top-0 z-40 border-b border-sky-200/60 bg-gradient-to-r from-sky-600 via-cyan-500 to-teal-500 text-white shadow-lg shadow-sky-400/20 backdrop-blur-xl;
+    }
+
+    .glass-card {
+        @apply rounded-2xl border border-rose-100/90 bg-white/85 shadow-lg shadow-sky-100/60 backdrop-blur;
+    }
+
+    .page-title {
+        @apply text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800;
+    }
+
+    .page-subtitle {
+        @apply mt-2 text-base md:text-lg text-slate-600;
+    }
+
+    .btn-primary {
+        @apply inline-flex items-center justify-center rounded-xl bg-sky-500 px-5 py-3 font-semibold text-white transition hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:ring-offset-2 focus:ring-offset-white;
+    }
+
+    .btn-secondary {
+        @apply inline-flex items-center justify-center rounded-xl border border-sky-100 bg-white px-5 py-3 font-semibold text-slate-700 transition hover:bg-sky-50;
+    }
+
+    .btn-primary-sm {
+        @apply inline-flex items-center justify-center rounded-lg bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-400;
+    }
+
+    .btn-danger {
+        @apply inline-flex items-center justify-center rounded-xl bg-rose-500 px-5 py-3 font-semibold text-white transition hover:bg-rose-400;
+    }
+
+    .metric-card {
+        @apply glass-card p-6;
+    }
+
+    .table-wrap {
+        @apply glass-card overflow-hidden;
+    }
+
+    .table-head {
+        @apply bg-sky-50/90 text-slate-700;
+    }
+
+    .form-control {
+        @apply w-full rounded-xl border border-rose-100 bg-white px-4 py-3 text-base text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100;
+    }
+
+    .form-label {
+        @apply mb-2 block text-sm font-semibold text-slate-700;
+    }
+
+    .form-hint {
+        @apply mt-1 text-xs text-slate-500;
+    }
+
+    .section-card {
+        @apply glass-card p-7;
+    }
+
+    .action-btn {
+        @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition;
+    }
+
+    .action-btn-view {
+        @apply border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100;
+    }
+
+    .action-btn-edit {
+        @apply border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100;
+    }
+
+    .action-btn-history {
+        @apply border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100;
+    }
+
+    .action-btn-delete {
+        @apply border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100;
+    }
+
+    .action-btn-approve {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100;
+    }
+
+    .action-btn-reject {
+        @apply border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100;
+    }
+
+    .status-badge {
+        @apply rounded-full px-3 py-1 text-xs font-semibold;
+    }
+
+    .status-pending {
+        @apply bg-amber-100 text-amber-700;
+    }
+
+    .status-active {
+        @apply bg-sky-100 text-sky-700;
+    }
+
+    .status-return-pending {
+        @apply bg-violet-100 text-violet-700;
+    }
+
+    .status-returned {
+        @apply bg-emerald-100 text-emerald-700;
+    }
+
+    .status-rejected {
+        @apply bg-rose-100 text-rose-700;
+    }
+
+    .profile-highlight {
+        @apply relative overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-r from-rose-100/80 via-sky-100/80 to-amber-100/80 p-7 shadow-lg shadow-sky-100/50;
+    }
+
+    .auth-shell {
+        @apply relative rounded-3xl border border-white/70 bg-white/90 p-7 shadow-2xl shadow-sky-100/70 backdrop-blur;
+    }
+
+    .auth-title {
+        @apply text-3xl font-extrabold tracking-tight text-slate-800;
+    }
+
+    .auth-subtitle {
+        @apply mt-2 text-sm text-slate-600;
+    }
+
+    .page-enter > * {
+        opacity: 0;
+        transform: translateY(10px);
+        animation: pageFadeIn 0.45s ease-out forwards;
+    }
+
+    .page-enter > *:nth-child(1) { animation-delay: 0.02s; }
+    .page-enter > *:nth-child(2) { animation-delay: 0.08s; }
+    .page-enter > *:nth-child(3) { animation-delay: 0.14s; }
+    .page-enter > *:nth-child(4) { animation-delay: 0.20s; }
+    .page-enter > *:nth-child(5) { animation-delay: 0.26s; }
+    .page-enter > *:nth-child(6) { animation-delay: 0.32s; }
+}
+
+@keyframes pageFadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-enter > * {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
