@@ -34,7 +34,8 @@ class DashboardController extends Controller
             ->count();
 
         $recentBorrowings = Borrowing::with(['user', 'book'])
-            ->latest('tanggal_peminjaman')
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->limit(10)
             ->get();
 
@@ -65,14 +66,23 @@ class DashboardController extends Controller
             ->count();
 
         $recentBorrowings = Borrowing::where('user_id', $user->id)
-            ->whereIn('status', [Borrowing::STATUS_RETURNED, Borrowing::STATUS_REJECTED, Borrowing::STATUS_LOST])
+            ->whereIn('status', [
+                Borrowing::STATUS_WAITING_PAYMENT,
+                Borrowing::STATUS_RETURNED,
+                Borrowing::STATUS_REJECTED,
+                Borrowing::STATUS_LOST,
+            ])
             ->with('book')
-            ->latest()
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->limit(5)
             ->get();
 
         $activeBorrowingsCount = $activeBorrowings->count();
-        $totalFines = Borrowing::where('user_id', $user->id)->sum('denda');
+        $totalFines = Borrowing::where('user_id', $user->id)
+            ->where('denda', '>', 0)
+            ->where('fine_payment_status', 'unpaid')
+            ->sum('denda');
         $availableBooksCount = Book::where('stok_tersedia', '>', 0)->count();
 
         return view('siswa.dashboard', [

@@ -5,16 +5,35 @@
 @section('content')
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
     <aside class="glass-card p-6">
-        <img src="{{ $book->cover_url }}" alt="Cover {{ $book->judul }}" class="mb-4 h-48 w-36 rounded-2xl border border-rose-100 object-cover">
-        <h2 class="text-xl font-bold text-slate-900">Detail Buku</h2>
-        <div class="mt-4 space-y-2 text-sm text-slate-600">
-            <p><span class="font-semibold text-slate-800">Judul:</span> {{ $book->judul }}</p>
-            <p><span class="font-semibold text-slate-800">Pengarang:</span> {{ $book->pengarang }}</p>
-            <p><span class="font-semibold text-slate-800">Penerbit:</span> {{ $book->penerbit }}</p>
-            <p><span class="font-semibold text-slate-800">Tahun:</span> {{ $book->tahun_terbit }}</p>
-            <p><span class="font-semibold text-slate-800">Kategori:</span> {{ $book->category->name ?? '-' }}</p>
-            <p><span class="font-semibold text-slate-800">Stok Tersedia:</span> {{ $book->stok_tersedia }}</p>
+        <div class="rounded-2xl border border-rose-100 bg-white/80 p-4 shadow-sm">
+            <img src="{{ $book->cover_url }}" alt="Cover {{ $book->judul }}" class="mx-auto h-80 w-60 rounded-xl border border-rose-100 object-cover shadow-sm">
+            <div class="mt-4 flex justify-center">
+                @if($book->stok_tersedia > 0)
+                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        Tersedia: {{ $book->stok_tersedia }} buku
+                    </span>
+                @else
+                    <span class="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                        Stok sedang habis
+                    </span>
+                @endif
+            </div>
         </div>
+
+        <dl class="mt-5 divide-y divide-rose-100 overflow-hidden rounded-2xl border border-rose-100 bg-white/70">
+            <div class="grid grid-cols-3 gap-3 px-4 py-3">
+                <dt class="col-span-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Penerbit</dt>
+                <dd class="col-span-2 text-sm text-slate-700">{{ $book->penerbit }}</dd>
+            </div>
+            <div class="grid grid-cols-3 gap-3 px-4 py-3">
+                <dt class="col-span-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Tahun</dt>
+                <dd class="col-span-2 text-sm text-slate-700">{{ $book->tahun_terbit }}</dd>
+            </div>
+            <div class="grid grid-cols-3 gap-3 px-4 py-3">
+                <dt class="col-span-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Kategori</dt>
+                <dd class="col-span-2 text-sm text-slate-700">{{ $book->category->name ?? '-' }}</dd>
+            </div>
+        </dl>
     </aside>
 
     <section class="glass-card p-6 lg:col-span-2">

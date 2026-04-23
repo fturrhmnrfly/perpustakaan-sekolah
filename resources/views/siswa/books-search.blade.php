@@ -27,7 +27,7 @@
     @if($books->count() > 0)
         <div class="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
             @foreach($books as $book)
-                <article class="glass-card overflow-hidden p-0">
+                <article class="glass-card flex h-full flex-col overflow-hidden p-0">
                     <div class="relative aspect-[3/4] w-full overflow-hidden bg-sky-50">
                         <img
                             src="{{ $book->cover_url }}"
@@ -40,11 +40,11 @@
                         </span>
                     </div>
 
-                    <div class="p-2.5">
+                    <div class="flex flex-1 flex-col p-2.5">
                         <h3 class="line-clamp-2 text-sm font-bold text-slate-900">{{ $book->judul }}</h3>
                         <p class="mt-1 line-clamp-1 text-xs text-slate-600">{{ $book->pengarang }}</p>
-                        <div class="mt-2 space-y-0.5 text-[11px] text-slate-600">
-                            <p>Penerbit: {{ $book->penerbit }}</p>
+                        <div class="mt-2 min-h-[60px] space-y-0.5 text-[11px] text-slate-600">
+                            <p class="truncate">Penerbit: {{ $book->penerbit }}</p>
                             <p>Tahun: {{ $book->tahun_terbit }}</p>
                             <p>
                                 Stok tersedia:
@@ -53,7 +53,7 @@
                                 </span>
                             </p>
                         </div>
-                        <a href="{{ route('books.borrow', $book) }}" class="btn-primary-sm mt-2 w-full">Pinjam</a>
+                        <a href="{{ route('books.borrow', $book) }}" class="btn-primary-sm mt-auto w-full">Pinjam</a>
                     </div>
                 </article>
             @endforeach

@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\BookController;
+use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\BorrowingController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StudentNotificationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +45,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/riwayat-peminjaman/unduh-pdf', [BorrowingController::class, 'downloadHistoryPdf'])->name('borrowing.history.pdf');
         Route::get('/riwayat-peminjaman/{borrowing}/bayar-denda', [BorrowingController::class, 'showFinePayment'])->name('borrowing.fine-payment');
         Route::post('/riwayat-peminjaman/{borrowing}/bayar-denda', [BorrowingController::class, 'processFinePayment'])->name('borrowing.fine-payment.process');
+
+        // Notifications
+        Route::get('/notifikasi', [StudentNotificationController::class, 'index'])->name('siswa.notifications.index');
+        Route::post('/notifikasi/tandai-dibaca', [StudentNotificationController::class, 'markAllAsRead'])->name('siswa.notifications.mark-all-read');
+        Route::delete('/notifikasi/hapus-semua', [StudentNotificationController::class, 'destroyAll'])->name('siswa.notifications.destroy-all');
+        Route::delete('/notifikasi/hapus-terpilih', [StudentNotificationController::class, 'destroySelected'])->name('siswa.notifications.destroy-selected');
     });
 
     // Admin routes
@@ -69,6 +77,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/borrowing/{borrowing}/approve', [BorrowingController::class, 'approveBorrowing'])->name('borrowing.approve');
         Route::post('/borrowing/{borrowing}/reject', [BorrowingController::class, 'rejectBorrowing'])->name('borrowing.reject');
         Route::post('/borrowing/{borrowing}/return-admin', [BorrowingController::class, 'adminProcessReturn'])->name('borrowing.process-return-admin');
+
+        // Admin notifications
+        Route::get('/admin/notifikasi', [AdminNotificationController::class, 'index'])->name('admin.notifications.index');
+        Route::post('/admin/notifikasi/tandai-dibaca', [AdminNotificationController::class, 'markAllAsRead'])->name('admin.notifications.mark-all-read');
+        Route::delete('/admin/notifikasi/hapus-semua', [AdminNotificationController::class, 'destroyAll'])->name('admin.notifications.destroy-all');
+        Route::delete('/admin/notifikasi/hapus-terpilih', [AdminNotificationController::class, 'destroySelected'])->name('admin.notifications.destroy-selected');
     });
 });
 

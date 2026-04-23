@@ -26,7 +26,11 @@
         </div>
         <div class="metric-card">
             <p class="text-sm font-semibold text-slate-500">Total Denda</p>
-            <p class="mt-2 text-3xl font-extrabold text-rose-700">Rp {{ number_format($totalFines, 0, ',', '.') }}</p>
+            @if($totalFines > 0)
+                <p class="mt-2 text-3xl font-extrabold text-rose-700">Rp {{ number_format($totalFines, 0, ',', '.') }}</p>
+            @else
+                <p class="mt-2 text-2xl font-extrabold text-emerald-700">Tidak ada</p>
+            @endif
         </div>
     </div>
 
@@ -64,14 +68,20 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4">
-                                @if($borrowing->status === 'menunggu_persetujuan')
+                                @if($borrowing->denda > 0 && $borrowing->fine_payment_status !== 'paid')
+                                    <span class="status-badge status-pending">Menunggu Pembayaran</span>
+                                @elseif($borrowing->status === 'menunggu_persetujuan')
                                     <span class="status-badge status-pending">Menunggu Persetujuan</span>
                                 @elseif($borrowing->status === 'aktif')
                                     <span class="status-badge status-active">Aktif</span>
                                 @elseif($borrowing->status === 'menunggu_pengembalian')
                                     <span class="status-badge status-return-pending">Menunggu Pengembalian</span>
+                                @elseif($borrowing->status === 'menunggu_pembayaran')
+                                    <span class="status-badge status-pending">Menunggu Pembayaran</span>
                                 @elseif($borrowing->status === 'dikembalikan')
                                     <span class="status-badge status-returned">Dikembalikan</span>
+                                @elseif($borrowing->status === 'hilang')
+                                    <span class="status-badge status-rejected">Hilang</span>
                                 @else
                                     <span class="status-badge status-rejected">Ditolak</span>
                                 @endif
@@ -81,8 +91,8 @@
                                 @if($borrowing->denda > 0)
                                     @if($borrowing->fine_payment_status === 'paid')
                                         <span class="status-badge status-returned">Lunas</span>
-                                    @elseif($borrowing->status === 'dikembalikan')
-                                        <a href="{{ route('borrowing.fine-payment', $borrowing) }}" class="action-btn action-btn-approve">Bayar QRIS</a>
+                                    @elseif(in_array($borrowing->status, ['menunggu_pembayaran', 'dikembalikan', 'hilang'], true))
+                                        <a href="{{ route('borrowing.fine-payment', $borrowing) }}" class="action-btn action-btn-approve">Bayar Sekarang</a>
                                     @else
                                         <span class="text-xs text-slate-400">Menunggu selesai</span>
                                     @endif

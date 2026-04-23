@@ -3,7 +3,8 @@
 @section('title', 'Daftar Buku')
 
 @section('content')
-<div class="space-y    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div class="space-y-6">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="page-title">Manajemen Buku</h1>
             <p class="page-subtitle">Kelola data koleksi dan stok buku perpustakaan.</p>
@@ -29,7 +30,7 @@
             <table class="min-w-full text-sm">
                 <thead class="table-head">
                     <tr>
-                             <th class="px-6 py-3 text-left font-semibold">Cover</th>
+                        <th class="px-6 py-3 text-left font-semibold">Cover</th>
                         <th class="px-6 py-3 text-left font-semibold">Judul</th>
                         <th class="px-6 py-3 text-left font-semibold">Pengarang</th>
                         <th class="px-6 py-3 text-left font-semibold">ISBN</th>
@@ -76,34 +77,15 @@
                     @empty
                         <tr>
                             <td colspan="9" class="px-6 py-8 text-center text-slate-500">Belum ada buku yang tercatat.</td>
-                   </tr>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
 
-    <div>{{ $books->links() }}</div>
-            </div>
-        </div>
-
-        <!-- Pagination -->
-        @if($books->hasPages())
-        <div class="mt-6">
-            {{ $books->links() }}
-        </div>
-        @endif
-    </div>
-
-            </div>
-        </div>
-
-        <!-- Pagination -->
-        @if($books->hasPages())
-        <div class="mt-6">
-            {{ $books->links() }}
-        </div>
-        @endif
-    </div>
+    @if($books->hasPages())
+        <div>{{ $books->links() }}</div>
+    @endif
 </div>
 @endsection

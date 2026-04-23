@@ -4,6 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Borrowing;
+use App\Models\User;
+use App\Notifications\BorrowingActionNotification;
+use App\Notifications\BorrowingFineInvoiceEmailNotification;
+use App\Notifications\BorrowingFinePaidEmailNotification;
+use App\Notifications\BorrowingReturnApprovedEmailNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -34,7 +39,10 @@ class BorrowingController extends Controller
             });
         }
 
-        $borrowings = $query->latest()->paginate(15);
+        $borrowings = $query
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate(15);
 
         return view('admin.borrowings.index', [
             'borrowings' => $borrowings,
@@ -92,13 +100,25 @@ class BorrowingController extends Controller
                 ->with('error', 'Maksimal transaksi aktif/pending adalah 3 buku.');
         }
 
-        Borrowing::create([
+        $newBorrowing = Borrowing::create([
             'user_id' => auth()->id(),
             'book_id' => $book->id,
             'tanggal_peminjaman' => now(),
             'tanggal_kembali_rencana' => $validated['tanggal_kembali_rencana'],
             'status' => Borrowing::STATUS_PENDING,
         ]);
+
+        $this->notifyBorrowingAction(
+            $newBorrowing->loadMissing('book'),
+            'Permintaan peminjaman dikirim',
+            'Permintaan peminjaman untuk buku "'.$newBorrowing->book->judul.'" sedang menunggu persetujuan admin.'
+        );
+        $this->notifyAdmins(
+            $newBorrowing,
+            'Permintaan peminjaman baru',
+            'Siswa '.$newBorrowing->user->name.' mengajukan peminjaman buku "'.$newBorrowing->book->judul.'".',
+            route('borrowings.index')
+        );
 
         return redirect()->route('dashboard')
             ->with('success', 'Permintaan peminjaman dikirim. Menunggu persetujuan admin.');
@@ -129,6 +149,12 @@ class BorrowingController extends Controller
             'stok_tersedia' => $borrowing->book->stok_tersedia - 1,
         ]);
 
+        $this->notifyBorrowingAction(
+            $borrowing->loadMissing('book'),
+            'Peminjaman disetujui',
+            'Peminjaman buku "'.$borrowing->book->judul.'" telah disetujui admin. Silakan ambil buku sesuai prosedur.'
+        );
+
         return redirect()->route('borrowings.index')
             ->with('success', 'Permintaan peminjaman berhasil disetujui.');
     }
@@ -152,6 +178,12 @@ class BorrowingController extends Controller
             'status' => Borrowing::STATUS_REJECTED,
             'keterangan' => $validated['keterangan'] ?? 'Permintaan ditolak oleh admin.',
         ]);
+
+        $this->notifyBorrowingAction(
+            $borrowing->loadMissing('book'),
+            'Peminjaman ditolak',
+            'Permintaan peminjaman buku "'.$borrowing->book->judul.'" ditolak admin. Cek detail keterangan pada riwayat.'
+        );
 
         return redirect()->route('borrowings.index')
             ->with('success', 'Permintaan peminjaman berhasil ditolak.');
@@ -195,6 +227,18 @@ class BorrowingController extends Controller
             'keterangan' => $validated['keterangan'] ?? 'Siswa mengajukan pengembalian.',
         ]);
 
+        $this->notifyBorrowingAction(
+            $borrowing->loadMissing('book'),
+            'Pengembalian diajukan',
+            'Permintaan pengembalian buku "'.$borrowing->book->judul.'" berhasil diajukan dan menunggu persetujuan admin.'
+        );
+        $this->notifyAdmins(
+            $borrowing,
+            'Permintaan pengembalian baru',
+            'Siswa '.$borrowing->user->name.' mengajukan pengembalian buku "'.$borrowing->book->judul.'".',
+            route('borrowings.index')
+        );
+
         return redirect()->route('borrowing.returns')
             ->with('success', 'Permintaan pengembalian dikirim. Menunggu persetujuan admin.');
     }
@@ -211,28 +255,54 @@ class BorrowingController extends Controller
         }
 
         $validated = $request->validate([
-            'kondisi_kembali' => 'required|in:baik,rusak ringan,rusak berat',
-            'keterangan' => 'nullable|string|max:500',
+            'kondisi_kembali' => 'required|in:baik,rusak ringan,rusak berat,hilang',
+            'keterangan' => 'required_unless:kondisi_kembali,baik|nullable|string|max:500',
+            'denda_kerusakan' => 'nullable|numeric|min:0',
         ]);
 
-        $denda = 0;
+        $dendaKeterlambatan = 0;
         if (now()->toDateString() > $borrowing->tanggal_kembali_rencana) {
             $daysLate = Carbon::now()->diffInDays(Carbon::parse($borrowing->tanggal_kembali_rencana));
-            $denda = $daysLate * 5000;
+            $dendaKeterlambatan = $daysLate * 5000;
+        }
+
+        $dendaKerusakan = 0;
+        if ($validated['kondisi_kembali'] !== 'baik') {
+            $request->validate([
+                'denda_kerusakan' => 'required|numeric|min:0',
+            ], [
+                'denda_kerusakan.required' => 'Nominal denda kerusakan/kehilangan wajib diisi.',
+            ]);
+
+            $dendaKerusakan = (float) $validated['denda_kerusakan'];
+        }
+
+        $totalDenda = $dendaKeterlambatan + $dendaKerusakan;
+        $isLost = $validated['kondisi_kembali'] === Borrowing::STATUS_LOST;
+
+        $nextStatus = Borrowing::STATUS_RETURNED;
+        if ($isLost) {
+            $nextStatus = Borrowing::STATUS_LOST;
+        } elseif ($totalDenda > 0) {
+            $nextStatus = Borrowing::STATUS_WAITING_PAYMENT;
         }
 
         $borrowing->update([
             'tanggal_kembali_aktual' => now(),
             'kondisi_kembali' => $validated['kondisi_kembali'],
             'keterangan' => $validated['keterangan'] ?? $borrowing->keterangan,
-            'denda' => $denda,
-            'fine_payment_status' => $denda > 0 ? 'unpaid' : 'paid',
-            'status' => Borrowing::STATUS_RETURNED,
+            'denda_keterlambatan' => $dendaKeterlambatan,
+            'denda_kerusakan' => $dendaKerusakan,
+            'denda' => $totalDenda,
+            'fine_payment_status' => $totalDenda > 0 ? 'unpaid' : 'paid',
+            'status' => $nextStatus,
         ]);
 
-        $borrowing->book->update([
-            'stok_tersedia' => $borrowing->book->stok_tersedia + 1,
-        ]);
+        if (! $isLost) {
+            $borrowing->book->update([
+                'stok_tersedia' => $borrowing->book->stok_tersedia + 1,
+            ]);
+        }
 
         if ($validated['kondisi_kembali'] !== 'baik') {
             $borrowing->book->update([
@@ -241,8 +311,25 @@ class BorrowingController extends Controller
         }
 
         $message = 'Pengembalian buku berhasil diproses.';
-        if ($denda > 0) {
-            $message .= ' Denda: Rp '.number_format($denda, 0, ',', '.');
+        if ($totalDenda > 0) {
+            $message .= ' Denda total: Rp '.number_format($totalDenda, 0, ',', '.').' (status: menunggu pembayaran).';
+        }
+
+        $notificationMessage = 'Pengembalian buku "'.$borrowing->book->judul.'" telah diproses admin.';
+        if ($totalDenda > 0) {
+            $notificationMessage .= ' Total denda: Rp '.number_format($totalDenda, 0, ',', '.').'.';
+        }
+
+        $this->notifyBorrowingAction(
+            $borrowing->loadMissing('book'),
+            'Pengembalian diproses',
+            $notificationMessage
+        );
+
+        $this->sendReturnApprovedEmail($borrowing);
+
+        if ($totalDenda > 0) {
+            $this->sendFineInvoiceEmail($borrowing);
         }
 
         return redirect()->route('borrowings.index')
@@ -258,14 +345,18 @@ class BorrowingController extends Controller
 
         $borrowings = Borrowing::where('user_id', $userId)
             ->with('book')
-            ->latest()
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->paginate(10);
 
         $borrowingsCount = Borrowing::where('user_id', $userId)->count();
         $activeBorrowingsCount = Borrowing::where('user_id', $userId)
             ->whereIn('status', [Borrowing::STATUS_ACTIVE, Borrowing::STATUS_RETURN_PENDING])
             ->count();
-        $totalFines = Borrowing::where('user_id', $userId)->sum('denda');
+        $totalFines = Borrowing::where('user_id', $userId)
+            ->where('denda', '>', 0)
+            ->where('fine_payment_status', 'unpaid')
+            ->sum('denda');
 
         return view('siswa.borrowing-history', [
             'borrowings' => $borrowings,
@@ -313,7 +404,8 @@ class BorrowingController extends Controller
         $borrowings = Borrowing::where('user_id', $userId)
             ->whereIn('status', [Borrowing::STATUS_ACTIVE, Borrowing::STATUS_RETURN_PENDING])
             ->with('book')
-            ->latest('tanggal_peminjaman')
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->paginate(8);
 
         $returnableCount = Borrowing::where('user_id', $userId)
@@ -326,7 +418,8 @@ class BorrowingController extends Controller
 
         $recentHistory = Borrowing::where('user_id', $userId)
             ->with('book')
-            ->latest()
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->limit(8)
             ->get();
 
@@ -347,7 +440,14 @@ class BorrowingController extends Controller
             abort(403);
         }
 
-        if ($borrowing->denda <= 0 || $borrowing->status !== Borrowing::STATUS_RETURNED) {
+        if (
+            $borrowing->denda <= 0
+            || ! in_array(
+                $borrowing->status,
+                [Borrowing::STATUS_WAITING_PAYMENT, Borrowing::STATUS_RETURNED, Borrowing::STATUS_LOST],
+                true
+            )
+        ) {
             return redirect()->route('borrowing.history')->with('error', 'Transaksi ini tidak memiliki denda yang harus dibayar.');
         }
 
@@ -365,7 +465,14 @@ class BorrowingController extends Controller
             abort(403);
         }
 
-        if ($borrowing->denda <= 0 || $borrowing->status !== Borrowing::STATUS_RETURNED) {
+        if (
+            $borrowing->denda <= 0
+            || ! in_array(
+                $borrowing->status,
+                [Borrowing::STATUS_WAITING_PAYMENT, Borrowing::STATUS_RETURNED, Borrowing::STATUS_LOST],
+                true
+            )
+        ) {
             return redirect()->route('borrowing.history')->with('error', 'Transaksi ini tidak memiliki denda yang harus dibayar.');
         }
 
@@ -377,12 +484,32 @@ class BorrowingController extends Controller
             'fine_payment_note' => 'nullable|string|max:255',
         ]);
 
+        $nextStatusAfterPayment = $borrowing->status === Borrowing::STATUS_WAITING_PAYMENT
+            ? Borrowing::STATUS_RETURNED
+            : $borrowing->status;
+
         $borrowing->update([
             'fine_payment_status' => 'paid',
             'fine_payment_method' => 'QRIS',
             'fine_payment_note' => $validated['fine_payment_note'] ?? null,
             'fine_paid_at' => now(),
+            'status' => $nextStatusAfterPayment,
         ]);
+
+        $fineDetail = $this->fineDetailText($borrowing);
+
+        $this->notifyBorrowingAction(
+            $borrowing->loadMissing('book'),
+            'Pembayaran denda dikonfirmasi',
+            'Pembayaran denda untuk buku "'.$borrowing->book->judul.'" berhasil dikonfirmasi melalui QRIS. '.$fineDetail
+        );
+        $this->notifyAdmins(
+            $borrowing,
+            'Konfirmasi pembayaran denda',
+            'Siswa '.$borrowing->user->name.' telah mengonfirmasi pembayaran denda untuk buku "'.$borrowing->book->judul.'". '.$fineDetail,
+            route('borrowings.index')
+        );
+        $this->sendFinePaidEmail($borrowing);
 
         return redirect()->route('borrowing.history')
             ->with('success', 'Pembayaran denda via QRIS berhasil dikonfirmasi.');
@@ -406,7 +533,8 @@ class BorrowingController extends Controller
         $user = auth()->user();
         $borrowings = Borrowing::where('user_id', $user->id)
             ->with('book')
-            ->latest()
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->get();
 
         return [
@@ -415,7 +543,99 @@ class BorrowingController extends Controller
             'generatedAt' => now(),
             'borrowingsCount' => $borrowings->count(),
             'activeBorrowingsCount' => $borrowings->whereIn('status', [Borrowing::STATUS_ACTIVE, Borrowing::STATUS_RETURN_PENDING])->count(),
-            'totalFines' => $borrowings->sum('denda'),
+            'totalFines' => $borrowings
+                ->where('denda', '>', 0)
+                ->filter(function ($borrowing) {
+                    return $borrowing->fine_payment_status === 'unpaid';
+                })
+                ->sum('denda'),
         ];
+    }
+
+    /**
+     * Create a database notification for borrowing action.
+     */
+    private function notifyBorrowingAction(Borrowing $borrowing, string $title, string $message): void
+    {
+        $borrowing->user->notify(new BorrowingActionNotification($borrowing, $title, $message));
+    }
+
+    /**
+     * Notify all admins about student actions.
+     */
+    private function notifyAdmins(Borrowing $borrowing, string $title, string $message, ?string $targetUrl = null): void
+    {
+        $admins = User::where('role', 'admin')->get();
+
+        foreach ($admins as $admin) {
+            $admin->notify(new BorrowingActionNotification($borrowing, $title, $message, $targetUrl));
+        }
+    }
+
+    /**
+     * Send email when return request has been approved by admin.
+     */
+    private function sendReturnApprovedEmail(Borrowing $borrowing): void
+    {
+        if (! $borrowing->user?->email) {
+            return;
+        }
+
+        $borrowing->user->notify(new BorrowingReturnApprovedEmailNotification($borrowing));
+    }
+
+    /**
+     * Send fine invoice email for late/damage/lost case.
+     */
+    private function sendFineInvoiceEmail(Borrowing $borrowing): void
+    {
+        if (! $borrowing->user?->email) {
+            return;
+        }
+
+        $borrowing->user->notify(new BorrowingFineInvoiceEmailNotification($borrowing));
+    }
+
+    /**
+     * Send fine paid confirmation email for student.
+     */
+    private function sendFinePaidEmail(Borrowing $borrowing): void
+    {
+        if (! $borrowing->user?->email) {
+            return;
+        }
+
+        $borrowing->user->notify(new BorrowingFinePaidEmailNotification($borrowing));
+    }
+
+    /**
+     * Build human-readable fine detail text for notifications.
+     */
+    private function fineDetailText(Borrowing $borrowing): string
+    {
+        $lateFine = (float) ($borrowing->denda_keterlambatan ?? 0);
+        $damageFine = (float) ($borrowing->denda_kerusakan ?? 0);
+        $parts = [];
+
+        if ($lateFine > 0) {
+            $parts[] = 'Denda keterlambatan: Rp '.number_format($lateFine, 0, ',', '.');
+        }
+
+        if ($damageFine > 0) {
+            $parts[] = 'Denda kerusakan/kehilangan: Rp '.number_format($damageFine, 0, ',', '.');
+        }
+
+        if (empty($parts)) {
+            return 'Jenis denda: umum.';
+        }
+
+        $detail = 'Rincian denda - '.implode('; ', $parts).'.';
+        $note = trim((string) ($borrowing->keterangan ?? ''));
+
+        if ($note !== '') {
+            $detail .= ' Keterangan: '.$note.'.';
+        }
+
+        return $detail;
     }
 }

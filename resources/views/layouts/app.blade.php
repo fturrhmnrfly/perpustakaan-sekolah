@@ -11,7 +11,7 @@
     <div class="app-shell">
         @include('components.navbar')
 
-        <main class="pb-10 pt-8">
+        <main class="pb-10 pt-6 sm:pt-8">
             <div class="w-full px-5 sm:px-8 lg:px-10">
                 @isset($header)
                     <div class="mb-6 section-card">

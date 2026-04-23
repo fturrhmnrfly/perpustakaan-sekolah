@@ -15,6 +15,8 @@
             <div class="mt-4 space-y-2 text-sm text-slate-600">
                 <p><span class="font-semibold text-slate-800">Judul Buku:</span> {{ $borrowing->book->judul }}</p>
                 <p><span class="font-semibold text-slate-800">Tanggal Kembali:</span> {{ optional($borrowing->tanggal_kembali_aktual)->format('d M Y') }}</p>
+                <p><span class="font-semibold text-slate-800">Denda Keterlambatan:</span> Rp {{ number_format($borrowing->denda_keterlambatan ?? 0, 0, ',', '.') }}</p>
+                <p><span class="font-semibold text-slate-800">Denda Kerusakan/Kehilangan:</span> Rp {{ number_format($borrowing->denda_kerusakan ?? 0, 0, ',', '.') }}</p>
                 <p><span class="font-semibold text-slate-800">Denda:</span> Rp {{ number_format($borrowing->denda, 0, ',', '.') }}</p>
             </div>
             <div class="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">

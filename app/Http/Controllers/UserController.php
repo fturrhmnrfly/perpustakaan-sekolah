@@ -134,7 +134,8 @@ class UserController extends Controller
 
         $borrowings = $user->borrowings()
             ->with('book')
-            ->latest('tanggal_peminjaman')
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->paginate(10);
 
         return view('admin.users.borrowing-history', [
@@ -152,7 +153,8 @@ class UserController extends Controller
 
         $borrowings = $user->borrowings()
             ->with('book')
-            ->latest('tanggal_peminjaman')
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->get();
 
         return view('reports.admin-user-history-report', [
@@ -172,7 +174,8 @@ class UserController extends Controller
 
         $borrowings = $user->borrowings()
             ->with('book')
-            ->latest('tanggal_peminjaman')
+            ->orderByDesc('tanggal_peminjaman')
+            ->orderByDesc('id')
             ->get();
 
         $pdf = Pdf::loadView('reports.admin-user-history-report', [

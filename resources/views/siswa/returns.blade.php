@@ -89,8 +89,12 @@
                                     <span class="status-badge status-active">Aktif</span>
                                 @elseif($history->status === 'menunggu_pengembalian')
                                     <span class="status-badge status-return-pending">Menunggu Pengembalian</span>
+                                @elseif($history->status === 'menunggu_pembayaran')
+                                    <span class="status-badge status-pending">Menunggu Pembayaran</span>
                                 @elseif($history->status === 'dikembalikan')
                                     <span class="status-badge status-returned">Dikembalikan</span>
+                                @elseif($history->status === 'hilang')
+                                    <span class="status-badge status-rejected">Hilang</span>
                                 @else
                                     <span class="status-badge status-rejected">Ditolak</span>
                                 @endif

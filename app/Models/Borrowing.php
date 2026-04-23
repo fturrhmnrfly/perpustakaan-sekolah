@@ -13,6 +13,7 @@ class Borrowing extends Model
     public const STATUS_PENDING = 'menunggu_persetujuan';
     public const STATUS_ACTIVE = 'aktif';
     public const STATUS_RETURN_PENDING = 'menunggu_pengembalian';
+    public const STATUS_WAITING_PAYMENT = 'menunggu_pembayaran';
     public const STATUS_RETURNED = 'dikembalikan';
     public const STATUS_REJECTED = 'ditolak';
     public const STATUS_LOST = 'hilang';
@@ -27,10 +28,13 @@ class Borrowing extends Model
         'kondisi_kembali',
         'keterangan',
         'denda',
+        'denda_keterlambatan',
+        'denda_kerusakan',
         'fine_payment_status',
         'fine_payment_method',
         'fine_payment_note',
         'fine_paid_at',
+        'due_reminder_sent_at',
     ];
 
     protected $casts = [
@@ -38,6 +42,7 @@ class Borrowing extends Model
         'tanggal_kembali_rencana' => 'date',
         'tanggal_kembali_aktual' => 'datetime',
         'fine_paid_at' => 'datetime',
+        'due_reminder_sent_at' => 'datetime',
     ];
 
     /**

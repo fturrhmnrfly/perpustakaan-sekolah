@@ -27,6 +27,7 @@
                         <th class="px-6 py-3 text-left font-semibold">Kondisi Kembali</th>
                         <th class="px-6 py-3 text-left font-semibold">Status</th>
                         <th class="px-6 py-3 text-right font-semibold">Denda</th>
+                        <th class="px-6 py-3 text-center font-semibold">Pembayaran</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200">
@@ -52,17 +53,32 @@
                                     <span class="status-badge status-active">Aktif</span>
                                 @elseif($borrowing->status === 'menunggu_pengembalian')
                                     <span class="status-badge status-return-pending">Menunggu Pengembalian</span>
+                                @elseif($borrowing->status === 'menunggu_pembayaran')
+                                    <span class="status-badge status-pending">Menunggu Pembayaran</span>
                                 @elseif($borrowing->status === 'dikembalikan')
                                     <span class="status-badge status-returned">Dikembalikan</span>
+                                @elseif($borrowing->status === 'hilang')
+                                    <span class="status-badge status-rejected">Hilang</span>
                                 @else
                                     <span class="status-badge status-rejected">Ditolak</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-right font-semibold text-slate-900">Rp {{ number_format($borrowing->denda, 0, ',', '.') }}</td>
+                            <td class="px-6 py-4 text-center">
+                                @if($borrowing->denda > 0)
+                                    @if($borrowing->fine_payment_status === 'paid')
+                                        <span class="status-badge status-returned">Lunas</span>
+                                    @else
+                                        <span class="status-badge status-pending">Belum Dibayar</span>
+                                    @endif
+                                @else
+                                    <span class="text-xs text-slate-400">-</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-slate-500">Tidak ada riwayat peminjaman.</td>
+                            <td colspan="8" class="px-6 py-8 text-center text-slate-500">Tidak ada riwayat peminjaman.</td>
                         </tr>
                     @endforelse
                 </tbody>
