@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::patch('/users/{user}/unblock', [UserController::class, 'unblock'])->name('users.unblock');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('/users/{user}/borrowing-history', [UserController::class, 'showBorrowingHistory'])->name('users.borrowing-history');
         Route::get('/users/{user}/borrowing-history/cetak', [UserController::class, 'printBorrowingHistory'])->name('users.borrowing-history.print');

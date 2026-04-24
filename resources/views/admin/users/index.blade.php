@@ -28,6 +28,7 @@
                         <th class="px-6 py-3 text-left font-semibold">Email</th>
                         <th class="px-6 py-3 text-left font-semibold">NIS</th>
                         <th class="px-6 py-3 text-left font-semibold">Telepon</th>
+                        <th class="px-6 py-3 text-left font-semibold">Status Akun</th>
                         <th class="px-6 py-3 text-center font-semibold">Aksi</th>
                     </tr>
                 </thead>
@@ -38,10 +39,29 @@
                             <td class="px-6 py-4 text-slate-600">{{ $user->email }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $user->no_identitas }}</td>
                             <td class="px-6 py-4 text-slate-600">{{ $user->phone ?? '-' }}</td>
+                            <td class="px-6 py-4">
+                                @if($user->blocked_at)
+                                    <div class="space-y-1">
+                                        <span class="inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">Diblokir</span>
+                                        @if($user->blocked_reason)
+                                            <p class="text-xs text-rose-700">{{ $user->blocked_reason }}</p>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Aktif</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 text-center">
                                 <div class="flex flex-wrap justify-center gap-2">
                                     <a href="{{ route('users.edit', $user) }}" class="action-btn action-btn-edit">Edit</a>
                                     <a href="{{ route('users.borrowing-history', $user) }}" class="action-btn action-btn-history">Riwayat</a>
+                                    @if($user->blocked_at)
+                                        <form action="{{ route('users.unblock', $user) }}" method="POST" onsubmit="return confirm('Buka blokir akun siswa ini?')">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="action-btn action-btn-history">Buka Blokir</button>
+                                        </form>
+                                    @endif
                                     <form action="{{ route('users.destroy', $user) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus siswa ini?')">
                                         @csrf
                                         @method('DELETE')
@@ -52,7 +72,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-slate-500">Belum ada data siswa.</td>
+                            <td colspan="6" class="px-6 py-8 text-center text-slate-500">Belum ada data siswa.</td>
                         </tr>
                     @endforelse
                 </tbody>

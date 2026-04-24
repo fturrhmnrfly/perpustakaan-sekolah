@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Borrowing;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -114,15 +116,56 @@ class UserController extends Controller
     {
         $this->authorizeAdmin();
 
-        if ($user->borrowings()->whereIn('status', ['menunggu_persetujuan', 'aktif', 'menunggu_pengembalian'])->exists()) {
+        [$hasUnreturnedBooks, $hasUnpaidFines] = $this->checkOutstandingLiabilities($user);
+
+        if ($hasUnreturnedBooks || $hasUnpaidFines) {
+            $reasons = [];
+            if ($hasUnreturnedBooks) {
+                $reasons[] = 'buku belum dikembalikan';
+            }
+            if ($hasUnpaidFines) {
+                $reasons[] = 'denda belum dibayar';
+            }
+
+            $reasonText = 'Akun diblokir otomatis karena '.implode(' dan ', $reasons).'.';
+
+            $user->update([
+                'blocked_at' => now(),
+                'blocked_reason' => $reasonText,
+            ]);
+
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+
             return redirect()->back()
-                ->with('error', 'Siswa tidak bisa dihapus karena masih memiliki transaksi aktif/pending!');
+                ->with('error', 'Akun tidak dihapus. '.$reasonText.' Siswa tidak bisa login sampai tanggungan diselesaikan.');
         }
 
         $user->delete();
 
         return redirect()->route('users.index')
             ->with('success', 'Siswa berhasil dihapus!');
+    }
+
+    /**
+     * Unblock student account if all liabilities are resolved
+     */
+    public function unblock(User $user)
+    {
+        $this->authorizeAdmin();
+
+        [$hasUnreturnedBooks, $hasUnpaidFines] = $this->checkOutstandingLiabilities($user);
+        if ($hasUnreturnedBooks || $hasUnpaidFines) {
+            return redirect()->back()
+                ->with('error', 'Akun belum bisa dibuka. Masih ada buku belum kembali atau denda belum dibayar.');
+        }
+
+        $user->update([
+            'blocked_at' => null,
+            'blocked_reason' => null,
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Akun siswa berhasil dibuka kembali dan bisa login.');
     }
 
     /**
@@ -196,5 +239,28 @@ class UserController extends Controller
         if (auth()->user()->role !== 'admin') {
             abort(403, 'Unauthorized');
         }
+    }
+
+    /**
+     * Check outstanding liabilities for a user
+     *
+     * @return array{bool, bool}
+     */
+    private function checkOutstandingLiabilities(User $user): array
+    {
+        $hasUnreturnedBooks = $user->borrowings()
+            ->whereIn('status', [
+                Borrowing::STATUS_PENDING,
+                Borrowing::STATUS_ACTIVE,
+                Borrowing::STATUS_RETURN_PENDING,
+            ])
+            ->exists();
+
+        $hasUnpaidFines = $user->borrowings()
+            ->where('denda', '>', 0)
+            ->where('fine_payment_status', 'unpaid')
+            ->exists();
+
+        return [$hasUnreturnedBooks, $hasUnpaidFines];
     }
 }

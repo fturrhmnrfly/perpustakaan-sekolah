@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Models\User;
 
 class LoginRequest extends FormRequest
 {
@@ -47,6 +48,17 @@ class LoginRequest extends FormRequest
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
+            ]);
+        }
+
+        /** @var User|null $authenticatedUser */
+        $authenticatedUser = Auth::user();
+        if ($authenticatedUser?->blocked_at !== null) {
+            Auth::logout();
+            RateLimiter::clear($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun kamu diblokir karena masih memiliki tanggungan buku/denda. Silakan hubungi admin perpustakaan.',
             ]);
         }
 
